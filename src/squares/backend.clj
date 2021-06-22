@@ -37,43 +37,50 @@
         y (rand-nth (range 14))]
     (if (detected-collision? x y) (find-free-place) {:x x :y y})))
 
+;; Allows to make sure that we handle WebSocket events one by one.
+;; Without this, something can happen between the time we check if a square is free and we move into it, for example.
+(defonce lock (new Object))
+
 (defonce ws-handler
   ;; When a new client connects via WebSocket, we assign them a random color and free location.
   ;; We add their WebSocket connection to ws-connections so that in the future we can broadcast to them.
   {:on-connect
    (fn [ws]
-     (let [free-color (try
-                        (rand-nth (into [] (clojure.set/difference
-                                            colors
-                                            (into #{} (map :color (vals @ws-connections))))))
-                        (catch Exception _ nil)) ;; if we ran out of colors after index.html was rendered
-           free-place (find-free-place)]
-       (when free-color
-         (swap! ws-connections assoc (str ws) {:color free-color
-                                               :x (:x free-place)
-                                               :y (:y free-place)
-                                               :ws ws})
-         (broadcast))))
+     (locking lock
+       (let [free-color (try
+                          (rand-nth (into [] (clojure.set/difference
+                                              colors
+                                              (into #{} (map :color (vals @ws-connections))))))
+                          (catch Exception _ nil)) ;; if we ran out of colors after index.html was rendered
+             free-place (find-free-place)]
+         (when free-color
+           (swap! ws-connections assoc (str ws) {:color free-color
+                                                 :x (:x free-place)
+                                                 :y (:y free-place)
+                                                 :ws ws})
+           (broadcast)))))
 
    ;; When a client closes, goes to another web page or refreshes, we automatically receive this event.
    :on-close
    (fn [ws _ _]
-     (swap! ws-connections dissoc (str ws))
-     (broadcast))
+     (locking lock
+       (swap! ws-connections dissoc (str ws))
+       (broadcast)))
 
    ;; Here we handle the key presses of arrow keys that we receive, and update the global state accordingly.
    :on-text
    (fn [ws text-message]
-     (let [json-message (json/read-str text-message :key-fn keyword)
-           ws-id (str ws)
-           x (:x (get @ws-connections ws-id))
-           y (:y (get @ws-connections ws-id))]
-       (case (:keycode json-message)
-         38 (if (not (detected-collision? x (dec y))) (swap! ws-connections update-in [ws-id :y] dec))
-         40 (if (not (detected-collision? x (inc y))) (swap! ws-connections update-in [ws-id :y] inc))
-         37 (if (not (detected-collision? (dec x) y)) (swap! ws-connections update-in [ws-id :x] dec))
-         39 (if (not (detected-collision? (inc x) y)) (swap! ws-connections update-in [ws-id :x] inc))))
-     (broadcast))})
+     (locking lock
+       (let [json-message (json/read-str text-message :key-fn keyword)
+             ws-id (str ws)
+             x (:x (get @ws-connections ws-id))
+             y (:y (get @ws-connections ws-id))]
+         (case (:keycode json-message)
+           38 (if (not (detected-collision? x (dec y))) (swap! ws-connections update-in [ws-id :y] dec))
+           40 (if (not (detected-collision? x (inc y))) (swap! ws-connections update-in [ws-id :y] inc))
+           37 (if (not (detected-collision? (dec x) y)) (swap! ws-connections update-in [ws-id :x] dec))
+           39 (if (not (detected-collision? (inc x) y)) (swap! ws-connections update-in [ws-id :x] inc))))
+       (broadcast)))})
 
 ;; Here we serve the index.html page.
 (compojure/defroutes web-app-routes
