@@ -5,7 +5,7 @@
             [reagent.core :as reagent]
             [reagent.dom :as dom]))
 
-;; The entire state of the frontend is stored in this data structure.
+;; The state of the frontend is stored in this data structure.
 (defonce state (reagent/atom {:you "White" :all []}))
 
 (defn cell-color
@@ -49,19 +49,27 @@
   (.stringify js/JSON (clj->js data-structure)))
 
 ;; We establish a WebSocket connection to the server.
-(macros/go (let [stream (async/<! (ws/connect "ws://localhost:3000/websockets/"))]
+(def ws-connection nil)
+(macros/go
+  (set! ws-connection (async/<! (ws/connect "ws://localhost:3000/websockets/")))
 
-        ;; We create an event listener that sends arrow key presses
-        ;; to the server via the WebSocket connection.
-             (.addEventListener js/document "keydown"
-                                (fn [event]
-                                  (let [keycode (.-keyCode event)]
-                                    (if (and (>= keycode 37) (<= keycode 40))
-                                      (macros/go (async/>! (:sink stream)
-                                                           (encode-json {:keycode keycode})))))))
+  ;; We create an event listener that sends arrow key presses
+  ;; to the server via the WebSocket connection.
+  (.addEventListener js/document "keydown"
+                     (fn [event]
+                       (let [keycode (.-keyCode event)]
+                         (if (and ws-connection (>= keycode 37) (<= keycode 40))
+                           (macros/go (async/>! (:sink ws-connection)
+                                                (encode-json {:keycode keycode})))))))
 
-             (while true ;; In an infinite loop
-          ;; we listen to WebSocket messages that arrive from the server
-          ;; and when they arrive we update the frontent state based on them.
-               (reset! state (parse-json (async/<! (:source stream))))
-               (async/<! (async/timeout 1)))))
+  ;; In a loop we listen to WebSocket messages that arrive from the server
+  ;; and when they arrive we update the frontent state based on them.
+  (while ws-connection
+    (let [received (async/<! (:source ws-connection))]
+      (if (nil? received) ;; when the connection closes, we receive a null message
+        (do
+          (js/alert (str "Please refresh. The connection to the server was lost due to:"
+                         (encode-json (async/<! (:close-status ws-connection)))))
+          (set! ws-connection nil))
+        (reset! state (parse-json received))))
+    (async/<! (async/timeout 1))))
