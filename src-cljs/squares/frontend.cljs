@@ -5,10 +5,27 @@
             [reagent.core :as reagent]
             [reagent.dom :as dom]))
 
+(defn parse-json
+  "Helper function that parses a stringified json into a data structure."
+  [json-as-string]
+  (js->clj (.parse js/JSON json-as-string) :keywordize-keys true))
+
+(defn encode-json
+  "Helper function that encodes a data structure into a stringified json."
+  [data-structure]
+  (.stringify js/JSON (clj->js data-structure)))
+
 ;; The state of the frontend is stored in this data structure.
 (defonce state (reagent/atom {:you "White" :all []}))
 
 (def ws-connection "WebSocket connection to the server." nil)
+
+(defn send-message
+  "Send a message to the server using the WebSocket connection."
+  [data-structure]
+  (if ws-connection
+    (macros/go (async/>! (:sink ws-connection)
+                         (encode-json data-structure)))))
 
 (defn cell-color
   "Helper function that calculates the color of every square in the grid."
@@ -31,33 +48,25 @@
                         [:td {:style {:background-color (cell-color x y)
                                       :width "40px"
                                       :height "40px"}
-                              :key (str "td-" x "-" y)}]))]))]]
+                              :key (str "td-" x "-" y)
+                              :on-click #(send-message {:type "click"
+                                                        :x x
+                                                        :y y})}]))]))]]
    [:div
     [:span "YOU ARE "]
     [:span {:style {:color (:you @state) :font-size "150%"}} "■"]
-    [:span " — MOVE USING ↑→↓←"]]])
+    [:span " — MOVE USING ↑→↓← OR CLICK ANYWHERE TO TELEPORT"]]])
 
 ;; We render the webpage using React.
 (dom/render [page] (.-body js/document))
-
-(defn parse-json
-  "Helper function that parses a stringified json into a data structure."
-  [json-as-string]
-  (js->clj (.parse js/JSON json-as-string) :keywordize-keys true))
-
-(defn encode-json
-  "Helper function that encodes a data structure into a stringified json."
-  [data-structure]
-  (.stringify js/JSON (clj->js data-structure)))
 
 ;; We create an event listener that sends arrow key presses
 ;; to the server via the WebSocket connection.
 (.addEventListener js/document "keydown"
                    (fn [event]
                      (let [keycode (.-keyCode event)]
-                       (if (and ws-connection (>= keycode 37) (<= keycode 40))
-                         (macros/go (async/>! (:sink ws-connection)
-                                              (encode-json {:keycode keycode})))))))
+                       (send-message {:type "key-press"
+                                      :keycode keycode}))))
 
 ;; We establish a WebSocket connection to the server.
 (macros/go

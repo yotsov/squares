@@ -51,7 +51,7 @@
                           (rand-nth (into [] (clojure.set/difference
                                               colors
                                               (into #{} (map :color (vals @ws-connections))))))
-                          (catch Exception _ nil)) ;; if we ran out of colors after index.html was rendered
+                          (catch IndexOutOfBoundsException _ nil)) ;; If we ran out of colors after index.html rendered.
              free-place (find-free-place)]
          (when free-color
            (swap! ws-connections assoc (str ws) {:color free-color
@@ -75,11 +75,15 @@
              ws-id (str ws)
              x (:x (get @ws-connections ws-id))
              y (:y (get @ws-connections ws-id))]
-         (case (:keycode json-message)
-           38 (if (not (detected-collision? x (dec y))) (swap! ws-connections update-in [ws-id :y] dec))
-           40 (if (not (detected-collision? x (inc y))) (swap! ws-connections update-in [ws-id :y] inc))
-           37 (if (not (detected-collision? (dec x) y)) (swap! ws-connections update-in [ws-id :x] dec))
-           39 (if (not (detected-collision? (inc x) y)) (swap! ws-connections update-in [ws-id :x] inc))))
+         (case (:type json-message)
+           "key-press" (case (:keycode json-message)
+                         38 (if (not (detected-collision? x (dec y))) (swap! ws-connections update-in [ws-id :y] dec))
+                         40 (if (not (detected-collision? x (inc y))) (swap! ws-connections update-in [ws-id :y] inc))
+                         37 (if (not (detected-collision? (dec x) y)) (swap! ws-connections update-in [ws-id :x] dec))
+                         39 (if (not (detected-collision? (inc x) y)) (swap! ws-connections update-in [ws-id :x] inc)))
+           "click" (when (not (detected-collision? (:x json-message) (:y json-message)))
+                     (swap! ws-connections assoc-in [ws-id :x] (:x json-message))
+                     (swap! ws-connections assoc-in [ws-id :y] (:y json-message)))))
        (broadcast)))})
 
 ;; Here we serve the index.html page.
