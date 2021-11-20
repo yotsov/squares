@@ -11,7 +11,9 @@
 
                  ;; frontend:
                  [org.clojure/clojurescript "1.10.866"] ;; like Clojure but compiles to JavaScript
-                 [reagent "1.0.0"] ;; ClojureScript wrapper around React
+                 [reagent "1.1.0"] ;; ClojureScript wrapper around React
+                 [cljsjs/react "17.0.2-0"]
+                 [cljsjs/react-dom "17.0.2-0"]
                  [haslett "0.1.6"]] ;; WebSocket library on the browser side
 
   :plugins [[lein-cljsbuild "1.1.8"] ;; helps compile ClojureScript to JavaScript
@@ -24,11 +26,7 @@
 
   :cljsbuild
   {:builds
-   [{;; To start locally, you need to have a recent JDK and Leiningen installed, and then:
-     ;; lein do clean, uberjar, cljsbuild once prod ; java -jar target/squares-1.0.0-standalone.jar
-     ;; Then open (in several different tabs for maximum effect):
-     ;; http://localhost:3000/index.html
-     :id "prod"
+   [{:id "prod"
      :source-paths ["src-cljs/"]
      ;; :figwheel false
      :compiler {:optimizations :advanced
