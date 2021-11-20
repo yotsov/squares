@@ -8,6 +8,8 @@
 ;; The state of the frontend is stored in this data structure.
 (defonce state (reagent/atom {:you "White" :all []}))
 
+(def ws-connection "WebSocket connection to the server." nil)
+
 (defn cell-color
   "Helper function that calculates the color of every square in the grid."
   [x y]
@@ -48,28 +50,27 @@
   [data-structure]
   (.stringify js/JSON (clj->js data-structure)))
 
+;; We create an event listener that sends arrow key presses
+;; to the server via the WebSocket connection.
+(.addEventListener js/document "keydown"
+                   (fn [event]
+                     (let [keycode (.-keyCode event)]
+                       (if (and ws-connection (>= keycode 37) (<= keycode 40))
+                         (macros/go (async/>! (:sink ws-connection)
+                                              (encode-json {:keycode keycode})))))))
+
 ;; We establish a WebSocket connection to the server.
-(def ws-connection nil)
 (macros/go
   (set! ws-connection (async/<! (ws/connect "ws://localhost:3000/websockets/")))
-
-  ;; We create an event listener that sends arrow key presses
-  ;; to the server via the WebSocket connection.
-  (.addEventListener js/document "keydown"
-                     (fn [event]
-                       (let [keycode (.-keyCode event)]
-                         (if (and ws-connection (>= keycode 37) (<= keycode 40))
-                           (macros/go (async/>! (:sink ws-connection)
-                                                (encode-json {:keycode keycode})))))))
 
   ;; In a loop we listen to WebSocket messages that arrive from the server
   ;; and when they arrive we update the frontent state based on them.
   (while ws-connection
     (let [received (async/<! (:source ws-connection))]
-      (if (nil? received) ;; when the connection closes, we receive a null message
+      (if (nil? received) ;; When the connection closes, we receive a null message.
         (do
-          (js/alert (str "Please refresh. The connection to the server was lost due to:"
+          (js/alert (str "Please refresh. The connection to the server was lost due to: "
                          (encode-json (async/<! (:close-status ws-connection)))))
           (set! ws-connection nil))
         (reset! state (parse-json received))))
-    (async/<! (async/timeout 1))))
+    (async/<! (async/timeout 1)))) ;; The timeout makes the loop behave a bit better.
