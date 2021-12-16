@@ -12,6 +12,11 @@
   [data-structure]
   (.stringify js/JSON (clj->js data-structure)))
 
+(defn in?
+  "true if coll contains elm"
+  [coll elm]
+  (some #(= elm %) coll))
+
 ;; The state of the frontend is stored in this data structure.
 (defonce state (reagent/atom {:you "White" :all []}))
 
@@ -61,8 +66,9 @@
 (.addEventListener js/document "keydown"
                    (fn [event]
                      (let [keycode (.-keyCode event)]
-                       (send-message {:type "key-press"
-                                      :keycode keycode}))))
+                       (if (in? [37 38 39 40] keycode)
+                         (send-message {:type "key-press"
+                                        :keycode keycode})))))
 
 ;; We establish a WebSocket connection to the server.
 (set! ws-connection (js/WebSocket. "ws://localhost:3000/websockets/"))
