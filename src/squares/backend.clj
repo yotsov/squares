@@ -3,6 +3,7 @@
             [ring.middleware.defaults :as ring]
             [ring.adapter.jetty9 :as jetty]
             [ring.adapter.jetty9.websocket :as ws]
+            [clojure.set :as set]
             [clojure.data.json :as json])
   (:gen-class)
   (:import (org.eclipse.jetty.server Server)))
@@ -29,10 +30,11 @@
   "Helper function that checks if [x y] is inaccessible: out of the grid or already occupied."
   [x y]
   (let [matches (filter #(and (= x (:x %)) (= y (:y %))) (vals @ws-connections))]
-    (or (not-empty matches) (>= x 14) (>= y 14) (< x 0) (< y 0))))
+    (or (not-empty matches) (>= x 14) (>= y 14) (neg? x) (neg? y))))
 
-(defn find-free-place []
+(defn find-free-place
   "Helper function that finds a random free place on the grid for a new square."
+  []
   (let [x (rand-nth (range 14))
         y (rand-nth (range 14))]
     (if (detected-collision? x y) (find-free-place) {:x x :y y})))
@@ -48,7 +50,7 @@
    (fn [ws]
      (locking lock
        (let [free-color (try
-                          (rand-nth (into [] (clojure.set/difference
+                          (rand-nth (into [] (set/difference
                                               colors
                                               (into #{} (map :color (vals @ws-connections))))))
                           (catch IndexOutOfBoundsException _ nil)) ;; If we ran out of colors after index.html rendered.

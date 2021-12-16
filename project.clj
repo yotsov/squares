@@ -4,10 +4,12 @@
 
   :dependencies [;; backend:
                  [org.clojure/clojure "1.10.3"]
+                 [ring/ring-core "1.9.4"] ;; dependency of several of the libraries below
                  [compojure "1.6.2"] ;; library for handing http requests
                  [ring/ring-defaults "0.3.3"] ;; library for wiring up a web app
                  [info.sunng/ring-jetty9-adapter "0.16.0"] ;; contains a simple WebSocket library
                  [org.clojure/data.json "2.4.0"] ;; parsing and encoding json
+                 [org.slf4j/slf4j-simple "2.0.0-alpha5"] ;; required by a library that uses slf4j
 
                  ;; frontend:
                  [org.clojure/clojurescript "1.10.896"] ;; like Clojure but compiles to JavaScript
@@ -19,12 +21,11 @@
   :plugins [[lein-cljsbuild "1.1.8"] ;; helps compile ClojureScript to JavaScript
 
             ;; optional plugins:
-
-            [lein-ancient "1.0.0-RC3"] ;; finds updatable dependencies by running:
-            ;; lein ancient ; echo "plugins:" ; lein ancient :plugins
-
-            [lein-cljfmt "0.8.0"]] ;; for formatting Clojure code using the command:
-            ;; lein do cljfmt fix, cljfmt fix src-cljs/squares/frontend.cljs, cljfmt fix project.clj
+            [lein-ancient "1.0.0-RC3"] ;; finds updatable dependencies
+            [lein-cljfmt "0.8.0"] ;; for formatting Clojure code
+            [jonase/eastwood "1.0.0"] ;; a Clojure linter
+            [lein-kibit "0.1.8"] ;; another linter, for both Clojure and ClojureScript
+            [org.clojure/clojure "1.10.3"]] ;; making sure the plugins use the latest Clojure
 
   :aot :all
   :main squares.backend
