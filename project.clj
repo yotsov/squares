@@ -15,8 +15,7 @@
                  [org.clojure/clojurescript "1.10.896"] ;; like Clojure but compiles to JavaScript
                  [reagent "1.1.0"] ;; ClojureScript wrapper around React
                  [cljsjs/react "17.0.2-0"]
-                 [cljsjs/react-dom "17.0.2-0"]
-                 [haslett "0.1.6"]] ;; WebSocket library on the browser side
+                 [cljsjs/react-dom "17.0.2-0"]]
 
   :plugins [[lein-cljsbuild "1.1.8"] ;; helps compile ClojureScript to JavaScript
 

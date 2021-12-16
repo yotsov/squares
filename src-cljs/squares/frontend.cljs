@@ -1,8 +1,5 @@
 (ns squares.frontend
-  (:require-macros [cljs.core.async.macros :as macros])
-  (:require [cljs.core.async :as async]
-            [haslett.client :as ws]
-            [reagent.core :as reagent]
+  (:require [reagent.core :as reagent]
             [reagent.dom :as dom]))
 
 (defn parse-json
@@ -24,8 +21,7 @@
   "Send a message to the server using the WebSocket connection."
   [data-structure]
   (if ws-connection
-    (macros/go (async/>! (:sink ws-connection)
-                         (encode-json data-structure)))))
+    (.send ws-connection (encode-json data-structure))))
 
 (defn cell-color
   "Helper function that calculates the color of every square in the grid."
@@ -69,17 +65,15 @@
                                       :keycode keycode}))))
 
 ;; We establish a WebSocket connection to the server.
-(macros/go
-  (set! ws-connection (async/<! (ws/connect "ws://localhost:3000/websockets/")))
+(set! ws-connection (js/WebSocket. "ws://localhost:3000/websockets/"))
+(set! (.-binaryType ws-connection) "arraybuffer")
 
-  ;; In a loop we listen to WebSocket messages that arrive from the server
-  ;; and when they arrive we update the frontent state based on them.
-  (while ws-connection
-    (let [received (async/<! (:source ws-connection))]
-      (if (nil? received) ;; When the connection closes, we receive a null message.
-        (do
-          (js/alert (str "Please refresh. The connection to the server was lost due to: "
-                         (encode-json (async/<! (:close-status ws-connection)))))
-          (set! ws-connection nil))
-        (reset! state (parse-json received))))
-    (async/<! (async/timeout 1)))) ;; The timeout makes the loop behave a bit better.
+;; When a message arrives from the server we update the frontent state based on it.
+(set! (.-onmessage ws-connection) (fn [e] ((reset! state (parse-json (.-data e))))))
+
+;; Handle getting disconnected from the server.
+(set! (.-onclose ws-connection)
+      (fn [e]
+        (set! ws-connection nil)
+        (js/alert (str "Please refresh, the connection to the server was lost due to "
+                       (.-reason e) " code " (.-code e) "."))))
