@@ -4,6 +4,7 @@
             [ring.adapter.jetty9 :as jetty]
             [ring.adapter.jetty9.websocket :as ws]
             [clojure.set :as set]
+            [malli.core :as m]
             [clojure.data.json :as json])
   (:gen-class)
   (:import (org.eclipse.jetty.server Server)))
@@ -15,6 +16,18 @@
 ;; Here we store the connections to all the connected WebSocket clients.
 ;; We also store in here the global application state (where each square is located).
 (defonce ws-connections (atom {}))
+
+(defonce ws-connections-schema
+  (m/schema [:map-of :string [:map {:closed true}
+                              [:x :int]
+                              [:y :int]
+                              [:color :string]
+                              [:ws :any]]]))
+
+(defn validate-ws-connections []
+  (assert (m/validate ws-connections-schema @ws-connections)))
+
+(validate-ws-connections)
 
 (defn broadcast
   "This function sends the latest global application state to all connected WebSocket clients."
@@ -57,9 +70,10 @@
              free-place (find-free-place)]
          (when free-color
            (swap! ws-connections assoc (str ws) {:color free-color
-                                                 :x (:x free-place)
-                                                 :y (:y free-place)
-                                                 :ws ws})
+                                                 :x     (:x free-place)
+                                                 :y     (:y free-place)
+                                                 :ws    ws})
+           (validate-ws-connections)
            (broadcast)))))
 
    ;; When a client closes, goes to another web page or refreshes, we automatically receive this event.
@@ -67,6 +81,7 @@
    (fn [ws _ _]
      (locking lock
        (swap! ws-connections dissoc (str ws))
+       (validate-ws-connections)
        (broadcast)))
 
    ;; Here we handle the key presses of arrow keys that we receive, and update the global state accordingly.
@@ -86,6 +101,7 @@
            "click" (when (not (detected-collision? (:x json-message) (:y json-message)))
                      (swap! ws-connections assoc-in [ws-id :x] (:x json-message))
                      (swap! ws-connections assoc-in [ws-id :y] (:y json-message)))))
+       (validate-ws-connections)
        (broadcast)))})
 
 ;; Here we serve the index.html page.
