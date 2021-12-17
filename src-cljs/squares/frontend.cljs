@@ -1,6 +1,7 @@
 (ns squares.frontend
   (:require [reagent.core :as reagent]
-            [reagent.dom :as dom]))
+            [reagent.dom :as dom]
+            [malli.core :as m]))
 
 (defn parse-json
   "Helper function that parses a stringified json into a data structure."
@@ -19,6 +20,18 @@
 
 ;; The state of the frontend is stored in this data structure.
 (defonce state (reagent/atom {:you "White" :all []}))
+
+(defonce state-schema
+  (m/schema [:map {:closed true}
+             [:you :string]
+             [:all [:sequential [:map {:closed true}
+                                 [:x :int]
+                                 [:y :int]
+                                 [:color :string]]]]]))
+
+(defn validate-state []
+  (when-not (m/validate state-schema @state)
+    (js/alert "State validation failed!")))
 
 (def ws-connection "WebSocket connection to the server." nil)
 
@@ -61,6 +74,8 @@
 ;; We render the webpage using React.
 (dom/render [page] (.-body js/document))
 
+(validate-state)
+
 ;; We create an event listener that sends arrow key presses
 ;; to the server via the WebSocket connection.
 (.addEventListener js/document "keydown"
@@ -75,7 +90,9 @@
 (set! (.-binaryType ws-connection) "arraybuffer")
 
 ;; When a message arrives from the server we update the frontent state based on it.
-(set! (.-onmessage ws-connection) (fn [e] ((reset! state (parse-json (.-data e))))))
+(set! (.-onmessage ws-connection) (fn [e]
+                                    (reset! state (parse-json (.-data e)))
+                                    (validate-state)))
 
 ;; Handle getting disconnected from the server.
 (set! (.-onclose ws-connection)

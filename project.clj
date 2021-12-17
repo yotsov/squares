@@ -7,7 +7,7 @@
                  [ring/ring-core "1.9.4"] ;; dependency of several of the libraries below
                  [compojure "1.6.2"] ;; library for handing http requests
                  [ring/ring-defaults "0.3.3"] ;; library for wiring up a web app
-                 [info.sunng/ring-jetty9-adapter "0.16.0"] ;; contains a simple WebSocket library
+                 [info.sunng/ring-jetty9-adapter "0.16.1"] ;; contains a simple WebSocket library
                  [org.clojure/data.json "2.4.0"] ;; parsing and encoding json
                  [org.slf4j/slf4j-simple "2.0.0-alpha5"] ;; required by a library that uses slf4j
 
@@ -18,7 +18,7 @@
                  [cljsjs/react-dom "17.0.2-0"]
 
                  ;; both:
-                 [metosin/malli "0.7.3"]] ;; schema-validation library
+                 [metosin/malli "0.7.3" :exclusions [org.clojure/tools.reader]]] ;; schema-validation library
 
   :plugins [[lein-cljsbuild "1.1.8"] ;; helps compile ClojureScript to JavaScript
 
