@@ -66,15 +66,17 @@
                           (rand-nth (into [] (set/difference
                                               colors
                                               (into #{} (map :color (vals @ws-connections))))))
-                          (catch IndexOutOfBoundsException _ nil)) ;; If we ran out of colors after index.html rendered.
+                          (catch IndexOutOfBoundsException _ nil)) ;; If we ran out of colors.
              free-place (find-free-place)]
-         (when free-color
-           (swap! ws-connections assoc (str ws) {:color free-color
-                                                 :x     (:x free-place)
-                                                 :y     (:y free-place)
-                                                 :ws    ws})
-           (validate-ws-connections)
-           (broadcast)))))
+         (if free-color
+           (do
+             (swap! ws-connections assoc (str ws) {:color free-color
+                                                   :x     (:x free-place)
+                                                   :y     (:y free-place)
+                                                   :ws    ws})
+             (validate-ws-connections)
+             (broadcast))
+           (ws/send! ws "full")))))
 
    ;; When a client closes, goes to another web page or refreshes, we automatically receive this event.
    :on-close
@@ -104,22 +106,8 @@
        (validate-ws-connections)
        (broadcast)))})
 
-;; Here we serve the index.html page.
-(compojure/defroutes web-app-routes
-  #_(compojure/GET "/index.html" []
-    (str "<!DOCTYPE html>\n
-          <html>\n
-          <head><meta charset=\"utf-8\"><title>Squares</title></head>\n
-          <body>"
-         (if (< (count (vals @ws-connections)) (count colors))
-           (str "</body>\n
-                 <script type=\"text/javascript\">\n\n"
-                (slurp "resources/public/js/compiled/app.js")
-                "\n\n</script></html>")
-           ;; If we have run out of square colors, instead of the JavaScript we return the message below:
-           "<div>We have reached the maximum number of connections. Please try later.</div></body></html>"))))
-
-;; We define the web app and the web server
+;; We define the web app and the web server.
+(compojure/defroutes web-app-routes)
 (defonce web-app (ring/wrap-defaults web-app-routes
                                      (assoc ring/site-defaults :static {:files ["resources/public"
                                                                                 "resources/public/js/compiled"]})))

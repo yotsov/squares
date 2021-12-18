@@ -91,8 +91,15 @@
 
 ;; When a message arrives from the server we update the frontent state based on it.
 (set! (.-onmessage ws-connection) (fn [e]
-                                    (reset! state (parse-json (.-data e)))
-                                    (validate-state)))
+                                    (let [received (.-data e)]
+                                      (if (= "full" received)
+                                        (do
+                                          (js/alert "Server cannot accept more connections. Refresh later.")
+                                          (.close ws-connection 1000 "Closed by creator")
+                                          (set! ws-connection nil))
+                                        (do
+                                          (reset! state (parse-json received))
+                                          (validate-state))))))
 
 ;; Handle getting disconnected from the server.
 (set! (.-onclose ws-connection)
