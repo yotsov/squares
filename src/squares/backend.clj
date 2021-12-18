@@ -106,7 +106,7 @@
 
 ;; Here we serve the index.html page.
 (compojure/defroutes web-app-routes
-  (compojure/GET "/index.html" []
+  #_(compojure/GET "/index.html" []
     (str "<!DOCTYPE html>\n
           <html>\n
           <head><meta charset=\"utf-8\"><title>Squares</title></head>\n
@@ -120,7 +120,9 @@
            "<div>We have reached the maximum number of connections. Please try later.</div></body></html>"))))
 
 ;; We define the web app and the web server
-(defonce web-app (ring/wrap-defaults web-app-routes ring/site-defaults))
+(defonce web-app (ring/wrap-defaults web-app-routes
+                                     (assoc ring/site-defaults :static {:files ["resources/public"
+                                                                                "resources/public/js/compiled"]})))
 (defonce web-server (atom nil))
 
 (defn stop-web-server

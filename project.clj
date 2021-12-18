@@ -31,7 +31,6 @@
 
   :aot :all
   :main squares.backend
-  :clean-targets ^{:protect false} ["target" "resources/public/js/compiled"]
 
   :cljsbuild
   {:builds

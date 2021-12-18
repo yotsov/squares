@@ -4,7 +4,7 @@ Tiny web app illustrating WebSocket duplex communication. You are a square: move
 
 To start locally, you need to have a recent JDK and Leiningen installed, and then:
 
-lein do clean, uberjar, cljsbuild once prod ; java -jar target/squares-1.0.0-standalone.jar
+lein do cljsbuild once prod, clean, uberjar ; java -jar target/squares-1.0.0-standalone.jar
 
 Then open (in several different tabs for maximum effect):
 
