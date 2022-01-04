@@ -38,7 +38,7 @@
 (defn send-message
   "Send a message to the server using the WebSocket connection."
   [data-structure]
-  (if ws-connection
+  (when ws-connection
     (.send ws-connection (encode-json data-structure))))
 
 (defn cell-color
@@ -81,7 +81,7 @@
 (.addEventListener js/document "keydown"
                    (fn [event]
                      (let [keycode (.-keyCode event)]
-                       (if (in? [37 38 39 40] keycode)
+                       (when (in? [37 38 39 40] keycode)
                          (send-message {:type "key-press"
                                         :keycode keycode})))))
 
